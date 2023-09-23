@@ -2,6 +2,9 @@ import machine
 import ssd1306
 import utime
 from do_connect import *
+import bluetooth
+from ble_simple_peripheral import BLESimplePeripheral
+import re
 # Definindo o tempo de debouncing em milissegundos
 DEBOUNCE_MS = 200
 
@@ -53,20 +56,62 @@ def display_count():
     display.text('A:reset B:invert', 0, 25)
     display.show()
     
-def try_connect_to_Wifi():
+def try_connect_to_Wifi(ssid, password):
     blue.value(0)
     display.fill(0)
     display.text('Wifi', 0, 0)
     try:
-        ip = do_connect('<Nome do wifi>', '<senha do wifi>')
+        ip = do_connect(ssid, password)
         display.text(f'Connected to {ip}', 0, 15)
         green.value(1)
     except:
-        display.text('error')
+        display.text('error', 0, 0)
         red.value(1)
     display.show()
 
-try_connect_to_Wifi()
+def get_Wifi_information_from_bluetooth(received_string):
+    # Remova o "b'" no início e o "'" no final
+    received_string = received_string[2:-1]
+
+    # Divida a string usando "|" como delimitador para obter partes
+    parts = received_string.split('|')
+
+    # Crie um dicionário para armazenar os valores
+    values = {}
+
+    # Divida cada parte usando ":" como delimitador e armazene os valores no dicionário
+    for part in parts:
+        key, value = part.split(':')
+        values[key] = value
+
+    # Recupere os valores de ssid e password do dicionário
+    ssid = values.get('ssid')
+    password = values.get('password')
+    return ssid, password
+    
+# Create a Bluetooth Low Energy (BLE) object
+ble = bluetooth.BLE()
+
+# Create an instance of the BLESimplePeripheral class with the BLE object
+sp = BLESimplePeripheral(ble)
+
+# Define a callback function to handle received data
+def on_rx(data):
+    print("Data received: ", data)  # Print the received data
+    received_string = data.decode('utf-8')
+    print("received_string")
+    #regex_pattern = r'^ssid:[\w]+|password:[\w]+$'
+    #match = re.match(regex_pattern, received_string)
+    #if(match):
+     #   print("information matched!")
+      #  ssid, password = get_Wifi_information_from_bluetooth(received_string);
+       # try_connect_to_Wifi(ssid, password)
+print("start bluetooth")
+# Start an infinite loop
+while True:
+    if sp.is_connected():  # Check if a BLE connection is established
+        sp.on_write(on_rx)  # Set the callback function for data reception
+
     
 
 while False:
@@ -98,5 +143,7 @@ while False:
     if not button_b.value() and utime.ticks_diff(utime.ticks_ms(), last_b_press) > DEBOUNCE_MS:
         decrement = not decrement
         last_b_press = utime.ticks_ms()
+
+
 
 

@@ -100,6 +100,10 @@ def on_rx(data):
     print("Data received: ", data)  # Print the received data
     received_string = data.decode('utf-8')
     print("received_string")
+    if received_string == "toggle": 
+        blue.value(0)
+        green.value(1)
+        
     #regex_pattern = r'^ssid:[\w]+|password:[\w]+$'
     #match = re.match(regex_pattern, received_string)
     #if(match):

@@ -4,12 +4,22 @@ class BeeServer:
     def __init__(self, connection):
         self.connection = connection
 
-    def __send_response(self, client, status_code, status_message):
-        response = "HTTP/1.1 {0} {1}\r\n\r\n".format(status_code, status_message)
+    def __send_response(self, client, status_code, status_message, content_type = None, content = None):
+        response = "HTTP/1.1 {0} {1}\r\n".format(status_code, status_message)
+        if content_type is not None:
+            response += "Content-Type: {0}\r\n".format(content_type)
+        if content is not None:
+            response += "Content-Length: {0}\r\n".format(len(content))
+        response += "\r\n"
+        if content is not None:
+            response += content
+
+        print('response: ', response)
         client.send(response)
         client.close()
 
     def __decode_instruction(self, header):
+        print('header: ', header)
         return header.split(' ')[1][1:]
 
     
@@ -19,6 +29,8 @@ class BeeServer:
             json_data = ujson.loads(data)
             print(json_data)
             self.__send_response(client, 200, "OK")
+        elif instruction == "data":
+            self.__send_response(client, 200, "OK", "application/json", '{"id": "5d0cdb5d-fc1e-48ff-a69b-88aaa44e1ea5", "location": {"longitude": -47.07645, "latitude": -22.82653}, "name": "Campinas", "frequencyOfSavingData": {"timeUnit": "MINUTES", "timeValue": 15}}')
         else:
             self.__send_response(client, 404, "Not Found")
     
@@ -27,8 +39,12 @@ class BeeServer:
         while True:
             client, addr = self.connection.accept()
             print('Got a connection from %s' % str(addr))
-            
-            header_request = client.recv(1024)
-            instruction = self.__decode_instruction(header_request.decode('utf-8'))
-            print(instruction)
-            self.__do_instruction(client, instruction)
+            try:
+                header_request = client.recv(1024)
+                instruction = self.__decode_instruction(header_request.decode('utf-8'))
+                print(instruction)
+                self.__do_instruction(client, instruction)
+            except:
+                print("Error")
+                client.close()
+                continue

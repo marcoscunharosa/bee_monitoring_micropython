@@ -1,8 +1,9 @@
 import ujson
 class BeeServer:
 
-    def __init__(self, connection):
+    def __init__(self, connection, database):
         self.connection = connection
+        self.database = database
 
     def __send_response(self, client, status_code, status_message, content_type = None, content = None):
         response = "HTTP/1.1 {0} {1}\r\n".format(status_code, status_message)
@@ -30,7 +31,7 @@ class BeeServer:
             print(json_data)
             self.__send_response(client, 200, "OK")
         elif instruction == "data":
-            self.__send_response(client, 200, "OK", "application/json", '{"id": "5d0cdb5d-fc1e-48ff-a69b-88aaa44e1ea5", "location": {"longitude": -47.07645, "latitude": -22.82653}, "name": "Campinas", "frequencyOfSavingData": {"timeUnit": "MINUTES", "timeValue": 15}}')
+            self.__send_response(client, 200, "OK", "application/json", self.database.get_data)
         else:
             self.__send_response(client, 404, "Not Found")
     

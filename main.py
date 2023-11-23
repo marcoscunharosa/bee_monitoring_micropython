@@ -1,23 +1,17 @@
 #cria conexao bluetooth, cria as duas threads e chama a leitura de sensores e o server
 
 from _thread import start_new_thread
-from machine import (Pin)
-from ble_listener import BleListener
-from do_connect import *
-from bee_server import BeeServer
+from connections_manager import ConnectionsManager
+from server_manager import ServerManager
 from database_manager import DatabaseManager
 from sensors_manager import SensorsManager
 
-# Ativando bluetooth
-ble = BleListener(do_connect_to_wifi)
-ble.start_ble_loop()
-
-# Após a conexão com o Wi-Fi, abre-se o socket do servidor
-connection = open_socket(ble.connected_ip)
-bee_server = BeeServer(connection)
-
 database_manager = DatabaseManager()
 sensors_manager = SensorsManager(database_manager)
+connections_manager = ConnectionsManager(database_manager)
 
-start_new_thread(bee_server.listen_to_connections, ())
+connection = connections_manager.connect_to_wifi()
+server_manager = ServerManager(connection, database_manager, sensors_manager)
+
+start_new_thread(server_manager.listen_to_connections, ())
 sensors_manager.sensors_reading()

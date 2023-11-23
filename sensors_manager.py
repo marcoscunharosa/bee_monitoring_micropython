@@ -21,7 +21,7 @@ class SensorsManager:
         #teste
         for i in range(14):
             readings = self.__read_sensors()
-            # self.database_manager.save(i, readings)
+            self.database_manager.save_readings(i, readings)
             print(readings)
 
         #real

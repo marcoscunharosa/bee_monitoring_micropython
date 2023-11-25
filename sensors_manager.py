@@ -18,17 +18,10 @@ class SensorsManager:
         self.proximity_counter = 0
 
     def sensors_reading(self):
-        #teste
-        for i in range(14):
+        while True:
+            timestamp = time()
             readings = self.__read_sensors()
-            self.database_manager.save_readings(i, readings)
-            print(readings)
-
-        #real
-        # while True:
-        #     timestamp = time()
-        #     readings = self.__read_sensors()
-        #     self.database_manager.save(timestamp, readings)
+            self.database_manager.save_readings(timestamp, readings)
 
     def set_timer(self, device_json_data):
         seconds = self.__translate_json_time(device_json_data['timeValue'], device_json_data['timeUnit'])

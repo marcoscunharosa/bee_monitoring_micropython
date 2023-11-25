@@ -71,7 +71,7 @@ class DatabaseManager:
         file.close()
     
     def save_device(self, device_data):
-        self.save_data(device_data)
+        self.save_data(self.device_path, device_data)
     
     def save_wifi_credentials(self, wifi_id, password):
         self.save_data(self.wifi_credentials_path, f'{wifi_id},{password}')

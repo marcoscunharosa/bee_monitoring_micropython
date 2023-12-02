@@ -1,10 +1,11 @@
 import ujson
 
 class ServerManager:
-    def __init__(self, connection, database, sensors_manager):
+    def __init__(self, connection, database, sensors_manager, connections_manager):
         self.connection = connection
         self.database = database
         self.sensors_manager = sensors_manager
+        self.connections_manager = connections_manager
 
     def listen_to_connections(self):
         print("Listening to connections...")
@@ -24,28 +25,24 @@ class ServerManager:
         command =  header.split(' ')[1][1:]
         aux = command.split('?')
 
-        if len(aux) == 1:
-            return command, None, None
-
         instruction = aux[0]
-        start_filter = int(aux[1].split('{')[1][:-1])
 
-        if len(aux) == 2:
-            return instruction, start_filter, None
+        try:
+            timestamp_start_filter = int(aux[1].split('=')[1])
+        except IndexError:
+            timestamp_start_filter = 0
         
-        end_filter = int(aux[2].split('{')[1][:-1])
-        return instruction, start_filter, end_filter
+        try:
+            timestamp_end_filter = int(aux[2].split('=')[1])
+        except IndexError:
+            timestamp_end_filter = float('inf')
+
+        return instruction, timestamp_start_filter, timestamp_end_filter
     
 
     def __do_instruction(self, client, instruction, timestamp_start_filter, timestamp_end_filter):
         if instruction == "register":
-            data = client.recv(1024).decode('utf-8')
-            self.database.save_device(data)
-
-            json_data = ujson.loads(data)
-            self.sensors_manager.set_timer(json_data["frequencyOfSavingData"])
-
-            self.__send_response(client, 200, "OK")
+            self.__handle_device_request(client)
         elif instruction == "device":
             self.__send_response(client, 200, "OK", "application/json", self.database.get_device_data())
         elif instruction == "data":
@@ -53,6 +50,8 @@ class ServerManager:
         elif instruction == "clear":
             self.database.clear()
             self.__send_response(client, 200, "OK")
+        elif instruction == "disconnect":
+            self.__handle_disconnect_request(client)
         else:
             self.__send_response(client, 404, "Not Found")
 
@@ -70,3 +69,20 @@ class ServerManager:
         client.send(response)
         client.close()
 
+    def __handle_device_request(self, client):
+        data = client.recv(1024).decode('utf-8')
+        self.database.save_device(data)
+
+        json_data = ujson.loads(data)
+        self.sensors_manager.set_timer(json_data["frequencyOfSavingData"])
+
+        self.__send_response(client, 200, "OK")
+    
+    def __handle_disconnect_request(self, client):
+        self.__send_response(client, 200, "OK")
+
+        self.database.erase_wifi_credentials()
+        self.database.erase_device_data()
+
+        self.connections_manager.reset_wifi_credentials()
+        self.connection = self.connections_manager.connect_to_wifi()

@@ -12,7 +12,7 @@ class SensorsManager:
             # 'pressure': {'object': bme680, 'read_method': self.__read_pressure},
             # 'humidity': {'object': bme680, 'read_method': self.__read_humidity}
         }
-        
+
         self.database_manager = database_manager
         self.timer = timer
         self.proximity_counter = 0
@@ -28,14 +28,16 @@ class SensorsManager:
         self.timer = seconds
 
     def __read_sensors(self):
-        readings = []
+        readings = {}
+
         for sensor_type in self.sensors:
             read_method = self.sensors[sensor_type]['read_method']
             sensor = self.sensors[sensor_type]['object']
 
             reading = read_method(sensor)
-            readings.append(reading)
-        
+            readings[sensor_type] = reading
+
+        print(readings)
         return readings
 
     def __translate_json_time(self, value, unit):

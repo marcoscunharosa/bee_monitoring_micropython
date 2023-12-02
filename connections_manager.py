@@ -1,3 +1,4 @@
+import re
 import network
 import time
 from socket import socket
@@ -7,39 +8,40 @@ from lib.ble_simple_peripheral import BLESimplePeripheral
 class ConnectionsManager:
     def __init__(self, database_manager):
         self.database_manager = database_manager
-        self.bluetooth = BLESimplePeripheral(bluetooth_low_energy())
+
         self.wifi_credentials = None
+        self.received_bluetooth_message = None
     
     def connect_to_wifi(self):
-        wifi_id, password = self.get_wifi_credentials()
-        ip = self.wait_for_connection(wifi_id, password)
+        ip = self.__connect_via_memory() or self.__connect_via_bluetooth()
         connection = self.open_socket(ip)
 
         return connection
 
-    def get_wifi_credentials(self):
-        if self.wifi_credentials:
-            return self.wifi_credentials
+    def __connect_via_memory(self):
+        wifi_credentials = self.database_manager.get_wifi_credentials()
+        if not wifi_credentials:
+            return None
         
-        saved_credentials = self.database_manager.get_wifi_credentials()
-        return saved_credentials if saved_credentials else self.get_wifi_via_bluetooth()
+        return self.wait_for_connection(wifi_credentials)
 
-    def set_wifi_credentials(self, wifi_id, password):
-        self.wifi_credentials = (wifi_id, password)
-        self.database_manager.save_wifi_credentials(wifi_id, password)
-        
-    def wait_for_connection(self, wifi_id, password):
-        wlan=network.WLAN(network.STA_IF)
-        wlan.active(True)
-        wlan.connect(wifi_id, password)
+    def wait_for_connection(self, wifi_credentials):
+        try:
+            name, password = wifi_credentials
+            wlan=network.WLAN(network.STA_IF)
+            wlan.active(True)
+            wlan.connect(name, password)
 
-        while wlan.isconnected() == False:
-            print('Waiting for connection...')
-            time.sleep(1)
-        
-        print('Connection Success!')
-        ip = wlan.ifconfig()[0]
-        return ip
+            while wlan.isconnected() == False:
+                print('Waiting for connection...')
+                time.sleep(1)
+            
+            print('Connection Success!')
+            ip = wlan.ifconfig()[0]
+            return ip
+        except Exception as e:
+            print('ERRO NA CONEXAO:', e)
+            return None
     
     def open_socket(self, ip):
         print('Opening socket')
@@ -50,46 +52,43 @@ class ConnectionsManager:
         connection.listen(1)
 
         return connection
-        
+
 #--------------------------------------------------BlueTooth methods-------------------------------------------------------------
     
-    def get_wifi_via_bluetooth(self):
-        print("bluetooth listener on")
+    def __connect_via_bluetooth(self):
+        self.received_bluetooth_message = ''
+        self.wifi_credentials = None
+        bluetooth = BLESimplePeripheral(bluetooth_low_energy())
+
+        print('bluetooth on')
         while True:
-            if self.bluetooth.is_connected():  # Check if a BLE connection is established
-                self.bluetooth.on_write(self.__receive_bluetooth_message)  # Set the callback function for data reception
-                print('bluetooth listener off')
-                return self.wifi_credentials
+            wifi_credentials = self.__get_wifi_credentials_via_bluetooth(bluetooth)
+            ip = self.wait_for_connection(wifi_credentials)
+
+            if ip:
+                bluetooth.send(ip)
+                self.database_manager.save_wifi_credentials(wifi_credentials)
+                print('bluetooth off')
+                return ip
+            else:
+                bluetooth.send('not_connected')
+                self.received_bluetooth_message = ''
+
+    def __get_wifi_credentials_via_bluetooth(self, bluetooth):
+        while not self.__received_message_complete():
+            if bluetooth.is_connected():
+                bluetooth.on_write(self.__receive_bluetooth_message)
+        
+        return self.__decode_message_to_credentials()
+    
+    def __received_message_complete(self):
+        pattern = r"\|.+?\|.+?\|"
+        return bool(re.match(pattern, self.received_bluetooth_message))
     
     def __receive_bluetooth_message(self, message):
         received_string = message.decode('utf-8')
-        print("received_string ", received_string)
+        self.received_bluetooth_message += received_string
 
-        wifi_id, wifi_password = self.__decode_wifi_credentials(received_string)
-        self.set_wifi_credentials(wifi_id, wifi_password)
-
-    def __decode_wifi_credentials(self, string):
-        _ ,wifi_id, wifi_password = string.split("|")
-        return wifi_id, wifi_password
-
-# def do_connect_to_wifi(ssid, psk):
-#     print('try connect to wifi')
-#     wlan=network.WLAN(network.STA_IF)
-#     wlan.active(True)
-#     wlan.connect(ssid, psk)
-
-#     while wlan.isconnected() == False:
-#         print('Waiting for connection...')
-#         time.sleep(1)
-    
-#     print('Connection Success!')
-#     ip = wlan.ifconfig()[0]
-#     return ip
-
-# def open_socket(ip):
-#     print('Opening socket')
-#     address = (ip, 80)
-#     connection = socket()
-#     connection.bind(address)
-#     connection.listen(1)
-#     return connection
+    def __decode_message_to_credentials(self):
+        _, wifi_id, wifi_password, _ = self.received_bluetooth_message.split("|")
+        return (wifi_id, wifi_password)

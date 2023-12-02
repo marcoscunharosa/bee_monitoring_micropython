@@ -1,3 +1,4 @@
+import ujson
 import machine
 from lib.sdcard import SDCard
 import uos
@@ -8,12 +9,12 @@ class DatabaseManager:
         self.database_path = '/sd/database.csv'
         self.device_path = '/sd/device.txt'
         self.wifi_credentials_path = '/sd/wifi_credentials.txt'
-        self.database_reading_positions = {
-            "timestamps" : 0,
-            "proximity": 1,
-            "external_sound": 2,
-            "internal_sound": 3,
-        }
+        self.data_order = [
+            "timestamps",
+            "proximity",
+            "external_sound",
+            "internal_sound"
+        ]
 
         self.__set_microSD()
         self.database = self.__set_database()
@@ -38,11 +39,8 @@ class DatabaseManager:
         return data.split(',')    
 
     def get_readings(self, timestamp_lower_bound, timestamp_upper_bound):
-        timestamp_lower_bound = timestamp_lower_bound if timestamp_lower_bound else 0
-        timestamp_upper_bound = timestamp_upper_bound if timestamp_upper_bound else float('inf')
-
         database_reader = self.__get_database_reader()
-        readings_dict = {reading_type: [] for reading_type in self.database_reading_positions}
+        readings_dict = {reading_type: [] for reading_type in self.data_order}
 
         while True:
             entry = database_reader.readline()
@@ -57,11 +55,10 @@ class DatabaseManager:
             elif int(readings[0]) > timestamp_upper_bound:
                 break
 
-            for reading_type in readings_dict:
-                position = self.database_reading_positions[reading_type]
-                readings_dict[reading_type].append(readings[position])
+            for reading_type, reading in zip(readings_dict, readings):
+                readings_dict[reading_type].append(reading)
 
-        return str(readings_dict)
+        return ujson.dumps(readings_dict)
 
 #-------------------------------------------------------writers---------------------------------------------------------
 
@@ -73,8 +70,9 @@ class DatabaseManager:
     def save_device(self, device_data):
         self.save_data(self.device_path, device_data)
     
-    def save_wifi_credentials(self, wifi_id, password):
-        self.save_data(self.wifi_credentials_path, f'{wifi_id},{password}')
+    def save_wifi_credentials(self, wifi_credentials):
+        name, password = wifi_credentials
+        self.save_data(self.wifi_credentials_path, f'{name},{password}')
 
     def save_readings(self, timestamp, readings):
         csv_formatted_data = self.__format_readings(timestamp, readings)
@@ -82,17 +80,25 @@ class DatabaseManager:
         self.database.write(csv_formatted_data)
         self.database.flush()
 
-#-------------------------------------------------------settings---------------------------------------------------------
+#-------------------------------------------------------erasers---------------------------------------------------------
 
     def clear(self):
         uos.remove(self.database_path)
         self.database = self.__set_database()
+    
+    def erase_wifi_credentials(self):
+        uos.remove(self.wifi_credentials_path)
+
+    def erase_device_data(self):
+        uos.remove(self.device_path)
+
+#-------------------------------------------------------settings---------------------------------------------------------
 
     def __format_readings(self, timestamp, readings):
         csv_formatted_readings = f'{timestamp}'
 
-        for reading in readings:
-            csv_formatted_readings += f',{reading}'
+        for reading_type in self.data_order[1:]:
+            csv_formatted_readings += f',{readings[reading_type]}'
 
         return csv_formatted_readings + '\n'
     
@@ -114,13 +120,13 @@ class DatabaseManager:
         uos.mount(vfs, "/sd")
     
     def __set_database(self):
-        database_header = 'timestamps,proximity,internal_sound,external_sound\n'
+        header = ','.join(self.data_order) + '\n'
 
         if file_exists(self.database_path):
             database = open(self.database_path, 'a')
         else:
             database = open(self.database_path, 'a')
-            database.write(database_header)
+            database.write(header)
             database.flush()
 
         return database

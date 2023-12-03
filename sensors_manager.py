@@ -1,8 +1,7 @@
 import machine
 from time import sleep, localtime, time
-
 class SensorsManager:
-    def __init__(self, database_manager, timer=5) -> None:
+    def __init__(self, database_manager, device_data=None) -> None:
         # bme680 = self.__set_bme680()
         self.sensors = {
             'proximity': {'object': self.__set_proximity_sensor(), 'read_method': self.__read_proximity},
@@ -14,7 +13,7 @@ class SensorsManager:
         }
 
         self.database_manager = database_manager
-        self.timer = timer
+        self.timer = self.set_timer(device_data) if device_data is not None else 5
         self.proximity_counter = 0
 
     def sensors_reading(self):

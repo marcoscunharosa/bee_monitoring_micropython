@@ -14,7 +14,15 @@ class DatabaseManager:
             "timestamps",
             "proximity",
             "external_sound",
-            "internal_sound"
+            "internal_sound",
+            "external_temperature",
+            "internal_temperature",
+            "external_humidity",
+            "internal_humidity",
+            "external_pressure",
+            "internal_pressure",
+            "external_gas",
+            "internal_gas"
         ]
 
         self.__set_microSD()

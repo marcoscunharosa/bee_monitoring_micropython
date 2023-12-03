@@ -3,12 +3,14 @@ import ujson
 class ServerManager:
     def __init__(self, connection, database, sensors_manager, connections_manager):
         self.connection = connection
+        
         self.database = database
         self.sensors_manager = sensors_manager
         self.connections_manager = connections_manager
 
     def listen_to_connections(self):
         print("Listening to connections...")
+        print("connection in server {0}".format(self.connection))
         while True:
             client, addr = self.connection.accept()
             print('Got a connection from %s' % str(addr))
@@ -31,13 +33,11 @@ class ServerManager:
         try:
             timestamp_start_filter = int(aux[1].split('=')[1])
         except IndexError as e:
-            print("Server manager error: ", e)
             timestamp_start_filter = 0
         
         try:
             timestamp_end_filter = int(aux[2].split('=')[1])
         except IndexError as e:
-            print("Server manager error: ", e)
             timestamp_end_filter = float('inf')
 
         return instruction, timestamp_start_filter, timestamp_end_filter
@@ -97,7 +97,6 @@ class ServerManager:
         self.__send_response(client, 200, "OK")
 
         self.database.erase_wifi_credentials()
-        self.database.erase_device_data()
 
-        self.connections_manager.reset_wifi_credentials()
+        #self.connections_manager.reset_wifi_credentials()
         self.connection = self.connections_manager.connect_to_wifi()

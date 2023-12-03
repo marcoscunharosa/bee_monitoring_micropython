@@ -3,7 +3,6 @@ from connections_manager import ConnectionsManager
 from server_manager import ServerManager
 from database_manager import DatabaseManager
 from sensors_manager import SensorsManager
-import ujson
 
 database_manager = DatabaseManager()
 initial_device_data = database_manager.get_initial_device_json()

@@ -63,10 +63,8 @@ class ConnectionsManager:
 
         port = 80
         connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        connection.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         connection.bind((ip, port))
-        connection.listen(1)
-        print(connection)
+        connection.listen(5)
         return connection
 
 #--------------------------------------------------BlueTooth methods-------------------------------------------------------------
@@ -74,27 +72,27 @@ class ConnectionsManager:
     def __connect_via_bluetooth(self):
         self.received_bluetooth_message = ''
         self.wifi_credentials = None
-        bluetooth = BLESimplePeripheral(bluetooth_low_energy())
-
+        ble = bluetooth_low_energy()
+        bluetooth = BLESimplePeripheral(ble)
+        self.is_bluetooth_on = True
         print('bluetooth on')
-        while True:
-            wifi_credentials = self.__get_wifi_credentials_via_bluetooth(bluetooth)
-            ip = self.wait_for_connection(wifi_credentials)
-
-            if ip:
-                bluetooth.send(ip)
-                self.database_manager.save_wifi_credentials(wifi_credentials)
-                print('bluetooth off')
-                return ip
-            else:
-                bluetooth.send('not_connected')
-                self.received_bluetooth_message = ''
+        wifi_credentials = self.__get_wifi_credentials_via_bluetooth(bluetooth)
+        ip = self.wait_for_connection(wifi_credentials)
+        if ip:
+            bluetooth.send(ip)
+            self.database_manager.save_wifi_credentials(wifi_credentials)
+            print('bluetooth off')
+            bluetooth.deactivate_ble()
+            return ip
+        else:
+            bluetooth.send('not_connected')
+            self.received_bluetooth_message = ''
+            return None
 
     def __get_wifi_credentials_via_bluetooth(self, bluetooth):
         while not self.__received_message_complete():
             if bluetooth.is_connected():
                 bluetooth.on_write(self.__receive_bluetooth_message)
-        
         return self.__decode_message_to_credentials()
     
     def __received_message_complete(self):

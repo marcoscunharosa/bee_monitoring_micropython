@@ -1,16 +1,22 @@
 import machine
 from time import sleep, localtime, time
 import ujson
+from lib.bme680 import BME680_I2C
 class SensorsManager:
     def __init__(self, database_manager, device_data=None) -> None:
-        # bme680 = self.__set_bme680()
+        bme680_internal, bme680_external = self.__try_to_set_bme680()
         self.sensors = {
             'proximity': {'object': self.__set_proximity_sensor(), 'read_method': self.__read_proximity},
             'internal_sound': {'object': self.__set_internal_sound_sensor(), 'read_method': self.__read_internal_sound},
             'external_sound': {'object': self.__set_external_sound_sensor(), 'read_method': self.__read_external_sound},
-            # 'temperature': {'object': bme680, 'read_method': self.__read_temperature},
-            # 'pressure': {'object': bme680, 'read_method': self.__read_pressure},
-            # 'humidity': {'object': bme680, 'read_method': self.__read_humidity}
+            'internal_temperature': {'object': bme680_internal, 'read_method': self.__read_temperature},
+            'internal_pressure': {'object': bme680_internal, 'read_method': self.__read_pressure},
+            'internal_humidity': {'object': bme680_internal, 'read_method': self.__read_humidity},
+            'internal_gas': {'object': bme680_internal, 'read_method': self.__read_gas},
+            'external_temperature': {'object': bme680_external, 'read_method': self.__read_temperature},
+            'external_pressure': {'object': bme680_external, 'read_method': self.__read_pressure},
+            'external_humidity': {'object': bme680_external, 'read_method': self.__read_humidity},
+            'external_gas': {'object': bme680_external, 'read_method': self.__read_gas}
         }
 
         self.database_manager = database_manager
@@ -90,27 +96,47 @@ class SensorsManager:
     def __read_external_sound(self, sensor):
         return sensor.read_u16()
 
-    # def __read_bem680(self):
-    #     sensor = self.__set_bme680()
+    def __read_temperature(self, bme):
+        if bme is None:
+            return None
+        else:
+            return bme.temperature
+    
+    def __read_humidity(self, bme):
+        if bme is None:
+            return None
+        else:
+            return bme.humidity
 
-    #     if sensor.get_sensor_data():
-    #         output = '{0:.2f} C,{1:.2f} hPa,{2:.3f} %RH'.format(
-    #             sensor.data.temperature,
-    #             sensor.data.pressure,
-    #             sensor.data.humidity)
-    #         print(output)
+    def __read_pressure(self, bme):
+        if bme is None:
+            return None
+        else:
+            return bme.pressure
+    
+    def __read_gas(self, bme):
+        if bme is None:
+            return None
+        else:
+            return bme.gas
 
-    # def __set_bme680():
-    #     try:
-    #         sensor = bme680.BME680(bme680.I2C_ADDR_PRIMARY)
-    #     except (RuntimeError, IOError):
-    #         sensor = bme680.BME680(bme680.I2C_ADDR_SECONDARY)
-        
-    #     sensor.set_humidity_oversample(bme680.OS_2X)
-    #     sensor.set_pressure_oversample(bme680.OS_4X)
-    #     sensor.set_temperature_oversample(bme680.OS_8X)
-    #     sensor.set_filter(bme680.FILTER_SIZE_3)
-
-    #     return sensor
+    def __set_bme680_internal(self):
+        i2c = machine.I2C(0, scl=machine.Pin(21), sda=machine.Pin(20))
+        bme = BME680_I2C(i2c=i2c)
+        return bme
+    def __set_bme680_external(self):
+        i2c = machine.I2C(0, scl=machine.Pin(25), sda=machine.Pin(24))
+        bme = BME680_I2C(i2c=i2c)
+        return bme
+    
+    def __try_to_set_bme680(self):
+        bme680_internal = None
+        bme680_external = None
+        try:
+            bme680_internal = self.__set_bme680_internal()
+            bme680_external = self.__set_bme680_external()
+        except Exception as e:
+            print('bme bad functioning')
+        return bme680_internal, bme680_external
     
 

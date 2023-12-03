@@ -60,7 +60,12 @@ class BLESimplePeripheral:
             value = self._ble.gatts_read(value_handle)
             if value_handle == self._handle_rx and self._write_callback:
                 self._write_callback(value)
-
+    def deactivate_ble(self):
+        self._ble.active(False)
+        for conn_handle in self._connections:
+            self._ble.gap_disconnect(conn_handle)
+        self._connections.clear()
+        
     def send(self, data):
         for conn_handle in self._connections:
             self._ble.gatts_notify(conn_handle, self._handle_tx, data)
@@ -99,3 +104,4 @@ def demo():
 
 if __name__ == "__main__":
     demo()
+

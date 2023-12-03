@@ -49,7 +49,8 @@ class ServerManager:
         elif instruction == "device":
             self.__send_response(client, 200, "OK", "application/json", self.database.get_device_data())
         elif instruction == "data":
-            self.__send_response(client, 200, "OK", "application/json", self.database.get_readings(timestamp_start_filter, timestamp_end_filter))
+            self.__handle_data_request(client)
+            # self.__send_response(client, 200, "OK", "application/json", self.database.get_readings(timestamp_start_filter, timestamp_end_filter))
         elif instruction == "clear":
             self.database.clear()
             self.__send_response(client, 200, "OK")
@@ -78,6 +79,19 @@ class ServerManager:
         self.sensors_manager.set_timer(json_data["frequencyOfSavingData"])
 
         self.__send_response(client, 200, "OK")
+
+    def __handle_data_request(self, client, timestamp_start_filter, timestamp_end_filter):
+        readings_generator = self.database.get_readings(timestamp_start_filter, timestamp_end_filter)
+
+        while True:
+            readings = next(readings_generator)
+            client.send(readings)
+            self.__send_response(client, 200, "OK", "application/json", readings)
+
+            if readings[-3:] == 'EOF':
+                client.send(readings[:-3])
+                self.__send_response(client, 200, "OK")
+
     
     def __handle_disconnect_request(self, client):
         self.__send_response(client, 200, "OK")

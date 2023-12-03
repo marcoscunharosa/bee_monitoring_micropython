@@ -9,6 +9,7 @@ class DatabaseManager:
         self.database_path = '/sd/database.csv'
         self.device_path = '/sd/device.txt'
         self.wifi_credentials_path = '/sd/wifi_credentials.txt'
+        self.data_batch_size = 80
         self.data_order = [
             "timestamps",
             "proximity",
@@ -40,25 +41,27 @@ class DatabaseManager:
 
     def get_readings(self, timestamp_lower_bound, timestamp_upper_bound):
         database_reader = self.__get_database_reader()
-        readings_dict = {reading_type: [] for reading_type in self.data_order}
+        data = database_reader.readline()
+        counter = 0
 
         while True:
             entry = database_reader.readline()
-            if not entry:
-                break
-            elif entry[-1] == '\n':
-                entry = entry[:-2]
+            counter += 1
 
-            readings = entry.split(',')
+            if not entry:
+                data += 'EOF'
+                return data
+
+            readings = data.split(',')
             if int(readings[0]) < timestamp_lower_bound:
                 continue
             elif int(readings[0]) > timestamp_upper_bound:
-                break
-
-            for reading_type, reading in zip(readings_dict, readings):
-                readings_dict[reading_type].append(reading)
-
-        return ujson.dumps(readings_dict)
+                data += 'EOF'
+                return data
+            
+            data += entry
+            if counter % self.data_batch_size == 0:
+                yield data
 
 #-------------------------------------------------------writers---------------------------------------------------------
 

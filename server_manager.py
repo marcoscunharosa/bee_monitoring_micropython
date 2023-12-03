@@ -25,7 +25,9 @@ class ServerManager:
     def __decode_instruction(self, header):
         command =  header.split(' ')[1][1:]
         aux = command.split('?')
+        
         instruction = aux[0]
+        print("instruction: {0}".format(command))
         try:
             timestamp_start_filter = int(aux[1].split('=')[1])
         except IndexError as e:
@@ -84,11 +86,11 @@ class ServerManager:
         while True:
             readings = next(readings_generator)
             client.send(readings)
-            self.__send_response(client, 200, "OK", "application/json", readings)
 
             if readings[-3:] == 'EOF':
                 client.send(readings[:-3])
                 self.__send_response(client, 200, "OK")
+                break
 
     
     def __handle_disconnect_request(self, client):

@@ -47,17 +47,16 @@ class DatabaseManager:
         while True:
             entry = database_reader.readline()
             counter += 1
-
-            if not entry:
+            if not entry or entry == '':
                 data += 'EOF'
-                return data
-
-            readings = data.split(',')
+                yield data
+            
+            readings = entry.split(',')
             if int(readings[0]) < timestamp_lower_bound:
                 continue
             elif int(readings[0]) > timestamp_upper_bound:
                 data += 'EOF'
-                return data
+                yield data
             
             data += entry
             if counter % self.data_batch_size == 0:

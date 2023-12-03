@@ -62,6 +62,7 @@ class DatabaseManager:
             data += entry
             if counter % self.data_batch_size == 0:
                 yield data
+                data = ''
 
 #-------------------------------------------------------writers---------------------------------------------------------
 

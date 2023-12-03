@@ -18,8 +18,9 @@ class SensorsManager:
         self.proximity_counter = 0
 
     def sensors_reading(self):
+        print('timer {0}'.format(self.timer))
         while True:
-            timestamp = time()
+            timestamp = time() * 1000
             readings = self.__read_sensors()
             self.database_manager.save_readings(timestamp, readings)
 
@@ -57,7 +58,7 @@ class SensorsManager:
 
         while True:
             if time() - initial_time >= self.timer:
-                print(self.proximity_counter)
+                #print(self.proximity_counter)
                 return self.proximity_counter
             
             if self.__new_day():

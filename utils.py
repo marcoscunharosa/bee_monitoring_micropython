@@ -11,5 +11,6 @@ def file_exists(path):
     try:
         os.stat(path)
         return True
-    except OSError:
+    except OSError as e:
+        print("Server manager error: ", e)
         return False

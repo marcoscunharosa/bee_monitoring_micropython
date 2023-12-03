@@ -25,9 +25,7 @@ class ServerManager:
     def __decode_instruction(self, header):
         command =  header.split(' ')[1][1:]
         aux = command.split('?')
-
         instruction = aux[0]
-
         try:
             timestamp_start_filter = int(aux[1].split('=')[1])
         except IndexError as e:
@@ -49,7 +47,7 @@ class ServerManager:
         elif instruction == "device":
             self.__send_response(client, 200, "OK", "application/json", self.database.get_device_data())
         elif instruction == "data":
-            self.__handle_data_request(client)
+            self.__handle_data_request(client, timestamp_start_filter, timestamp_end_filter)
             # self.__send_response(client, 200, "OK", "application/json", self.database.get_readings(timestamp_start_filter, timestamp_end_filter))
         elif instruction == "clear":
             self.database.clear()
@@ -101,4 +99,3 @@ class ServerManager:
 
         self.connections_manager.reset_wifi_credentials()
         self.connection = self.connections_manager.connect_to_wifi()
-

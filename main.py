@@ -10,6 +10,7 @@ connections_manager = ConnectionsManager(database_manager)
 
 connection = connections_manager.connect_to_wifi()
 server_manager = ServerManager(connection, database_manager, sensors_manager, connections_manager)
-
 start_new_thread(sensors_manager.sensors_reading, ())
 server_manager.listen_to_connections()
+
+

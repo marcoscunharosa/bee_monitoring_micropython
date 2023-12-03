@@ -18,8 +18,9 @@ class ServerManager:
                 self.__do_instruction(client, instruction, timestamp_start_filter, timestamp_end_filter)
             except Exception as e:
                 print("Server manager error: ", e)
+                self.__send_response(client, 404, "Not Found")
+            finally:
                 client.close()
-                continue
 
     def __decode_instruction(self, header):
         command =  header.split(' ')[1][1:]
@@ -29,12 +30,14 @@ class ServerManager:
 
         try:
             timestamp_start_filter = int(aux[1].split('=')[1])
-        except IndexError:
+        except IndexError as e:
+            print("Server manager error: ", e)
             timestamp_start_filter = 0
         
         try:
             timestamp_end_filter = int(aux[2].split('=')[1])
-        except IndexError:
+        except IndexError as e:
+            print("Server manager error: ", e)
             timestamp_end_filter = float('inf')
 
         return instruction, timestamp_start_filter, timestamp_end_filter
@@ -65,9 +68,7 @@ class ServerManager:
         response += "\r\n"
         if content is not None:
             response += content
-
         client.send(response)
-        client.close()
 
     def __handle_device_request(self, client):
         data = client.recv(1024).decode('utf-8')
@@ -86,3 +87,4 @@ class ServerManager:
 
         self.connections_manager.reset_wifi_credentials()
         self.connection = self.connections_manager.connect_to_wifi()
+

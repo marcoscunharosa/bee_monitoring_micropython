@@ -1,7 +1,7 @@
 import re
 import network
 import time
-from socket import socket
+import socket
 from bluetooth import BLE as bluetooth_low_energy
 from lib.ble_simple_peripheral import BLESimplePeripheral
 
@@ -14,13 +14,15 @@ class ConnectionsManager:
     
     def connect_to_wifi(self):
         ip = self.__connect_via_memory() or self.__connect_via_bluetooth()
+        print(ip)
         connection = self.open_socket(ip)
 
         return connection
 
     def __connect_via_memory(self):
         wifi_credentials = self.database_manager.get_wifi_credentials()
-        if not wifi_credentials:
+        device_is_not_registered = not self.is_device_registered()
+        if not wifi_credentials or device_is_not_registered:
             return None
         
         return self.wait_for_connection(wifi_credentials)
@@ -31,26 +33,40 @@ class ConnectionsManager:
             wlan=network.WLAN(network.STA_IF)
             wlan.active(True)
             wlan.connect(name, password)
+            times_to_try_connection = 12
 
             while wlan.isconnected() == False:
                 print('Waiting for connection...')
                 time.sleep(1)
+                times_to_try_connection -= 1
+                if times_to_try_connection == 0:
+                    raise Exception('Wi-fi connection time-out')
             
             print('Connection Success!')
             ip = wlan.ifconfig()[0]
             return ip
+            
         except Exception as e:
             print('ERRO NA CONEXAO:', e)
             return None
+    
+    def is_device_registered(self):
+        try:
+            if self.database_manager.get_device_data() is None:
+                return False
+            return True
+        except:
+            return False
     
     def open_socket(self, ip):
         print('Opening socket')
 
         port = 80
-        connection = socket()
+        connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        connection.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         connection.bind((ip, port))
         connection.listen(1)
-
+        print(connection)
         return connection
 
 #--------------------------------------------------BlueTooth methods-------------------------------------------------------------

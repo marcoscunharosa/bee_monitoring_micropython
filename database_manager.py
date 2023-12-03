@@ -32,6 +32,12 @@ class DatabaseManager:
     def get_device_data(self):
         return self.get_file_data(self.device_path)
     
+    def get_initial_device_json(self):
+        try:
+            return ujson.loads(self.get_device_data())
+        except:
+            return None
+    
     def get_wifi_credentials(self):
         if not file_exists(self.wifi_credentials_path):
             return None

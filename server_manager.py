@@ -89,7 +89,7 @@ class ServerManager:
 
             if readings[-3:] == 'EOF':
                 client.send(readings[:-3])
-                self.__send_response(client, 200, "OK")
+                #self.__send_response(client, 200, "OK")
                 break
 
     

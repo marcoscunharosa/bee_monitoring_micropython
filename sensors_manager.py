@@ -1,5 +1,6 @@
 import machine
 from time import sleep, localtime, time
+import ujson
 class SensorsManager:
     def __init__(self, database_manager, device_data=None) -> None:
         # bme680 = self.__set_bme680()
@@ -13,7 +14,10 @@ class SensorsManager:
         }
 
         self.database_manager = database_manager
-        self.timer = self.set_timer(device_data) if device_data is not None else 5
+        if device_data is not None:
+            self.set_timer(device_data['frequencyOfSavingData'])
+        else:
+            self.timer = 60
         self.proximity_counter = 0
 
     def sensors_reading(self):
@@ -109,3 +113,4 @@ class SensorsManager:
 
     #     return sensor
     
+
